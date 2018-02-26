@@ -1,0 +1,525 @@
+Prosper Loan Data Analysis by Jason Yang
+========================================================
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, comment=NA)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(gridExtra)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+prosperLoanData <- read.csv(file='./prosperLoanData.csv', header=TRUE, sep=",")
+
+```
+
+
+In this analysis, we explore loan data from Prosper. This data set contains 
+113,937 loans with 81 variables on each loan, including loan amount, borrower 
+rate (or interest rate), current loan status, borrower income, borrower 
+employment status, borrower credit history, and the latest payment information.
+
+# Univariate Plots Section
+
+```{r echo=FALSE, Univariate_Plots_structure}
+str(prosperLoanData)
+```
+Our dataset consists of 81 variables and about 114,000 observations.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots1}
+# summary(prosperLoanData);
+
+ggplot(aes(x=IncomeRange), data = prosperLoanData) + 
+  geom_histogram(stat = 'count') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('$0','$1-24,999','$25,000-49,999', '$50,000-74,999',
+                            '$75,000-99,999','$100,000+','Not displayed',
+                            'Not employed'))
+```
+
+To start the investigation, I wanted to explore what type of customers Prosper
+make loans to. By plotting the income range, we can see that most of the 
+borrowers are between income ranges of $25,000 and $75,000. I wonder what this 
+plot looks like across other categorical variables of employment status, 
+homeownership, and loan status.
+
+
+```{r}
+levels(prosperLoanData$LoanStatus) <- c('Cancelled','Chargedoff', 'Completed', 
+                                        'Current','Defaulted',
+                                        'FinalPaymentInProgress','Past Due',  
+                                        'Past Due', 'Past Due','Past Due', 
+                                        'Past Due', 'Past Due')
+
+levels(prosperLoanData$LoanStatus)
+```
+
+Combined all Past due statuses into a single past due status.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots2}
+ggplot(aes(x=EmploymentStatus), data = prosperLoanData) + 
+  geom_histogram(stat = 'count') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1))
+
+ggplot(aes(x=IsBorrowerHomeowner), data = prosperLoanData) + 
+  geom_histogram(stat = 'count')
+
+ggplot(aes(x=LoanStatus), data = prosperLoanData) + 
+  geom_histogram(stat = 'count') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('Cancelled','Chargedoff', 'Completed', 'Current',
+                            'Defaulted', 'FinalPaymentInProgress', 'Past Due'))
+```
+
+Most borrowers are employed, this categorical variable has 2,255 null values. 
+The number of borrowers that is a homeowner is about the same as the number not
+owning a home. A majority of the loan that was taken out has a status of 
+completed or current.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots3}
+ggplot(aes(x=BorrowerAPR), data = prosperLoanData) + 
+  geom_histogram() 
+
+prosperLoanData$CreditScoreAverage <- (prosperLoanData$CreditScoreRangeLower +
+                                      prosperLoanData$CreditScoreRangeUpper)/2
+
+ggplot(aes(x=CreditScoreAverage), data = prosperLoanData) + 
+  geom_histogram(binwidth = 10) +
+  coord_cartesian(xlim=c(450,850)) +
+  xlab("Average Credit Score") +
+  scale_x_continuous(breaks = seq(450,850,50))
+
+ggplot(aes(x=LoanOriginalAmount), data = prosperLoanData) +
+  geom_histogram(binwidth = 500) +
+  scale_x_continuous(breaks = seq(0,35000,5000))
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots4}
+summary(prosperLoanData$BorrowerAPR)
+summary(prosperLoanData$CreditScoreAverage)
+summary(prosperLoanData$LoanOriginalAmount)
+
+```
+
+The lowest APR was 0.00653 and the highest APR was 0.512. On average, a 
+borrower had an APR of 0.219, which was higher than the median APR of 0.210. 
+Visually, we can see the Borrower APR graph skewed slightly to the right, with 
+a two local maximum peaks to the right of 0.25. I wonder how higher APR is 
+connected to homeownership and employment status. \
+To analyze credit score, I introduced a new variable called 
+"CreditScoreAverage." This new variable is the average of the upper and lower 
+credit score in our dataset. I've trimmed the graph to be between 450 and 850, 
+which was where most of the data was. Most users had a credit score of around 
+690. \
+Viewing the original amount of loan incurred, common amounts include increments 
+of thousands (i.e. $1,000; $2,000; etc.) in low ranges and increments of 5 
+thousands up to $35,000. The median loan original amount was $6,500.
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+Our dataset consists of 81 variables and about 114,000 observations. Borrowers 
+are categorized into income ranges, homeownership, and loan status. \
+Observations: \
+- The number of homeowners and non-homeowners are about the same  \
+- Median credit score is 690 \
+- Median and mean APR are 0.210 and 0.219, respectively \
+- Most loan status are complete or current. \
+- A majority of borrowers make loans below $10,000.
+
+
+### What is/are the main feature(s) of interest in your dataset?
+For me, the main features of interest are borrower's credit score, original 
+loan amount, and borrower's APR. I suspect borrower's APR can be modeled using 
+borrower's credit score in some combination of other variables. I think APR is 
+heavily dependent on credit score and loan amount, but other categorical 
+variables may reveal additional relationships.
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+Other features of interest include homeownership, employment status, and 
+income range. It would be interesting to investigate the dataset using loan 
+status feature to see which loans are deliquent (charged off, defaulted, past 
+due).
+
+### Did you create any new variables from existing variables in the dataset?
+For the univariant analysis, I combined all Past due statuses into a single 
+past due status. I also created the "CreditScoreAverage" variable. 
+
+
+# Bivariate Plots Section
+
+```{r echo=FALSE, Bivariate_Plots}
+ggplot(aes(x=CreditScoreAverage, y =BorrowerAPR), data = prosperLoanData) +
+  geom_point(alpha = 0.01,
+             position = position_jitter(h = 0),
+             color = 'blue')
+```
+
+As one would expect, higher credit scores are usually related with lower APR. 
+However, credit scores do not seem to be the only deciding factor when 
+determining APR. From the graph, there are distinct horizontal lines at 0.3 and 
+0.375 APR. I think plotting the borrower APR and loan amount graph will help.
+
+
+```{r echo=FALSE, Bivariate_Plots2}
+ggplot(aes(x=LoanOriginalAmount, y =BorrowerAPR), data = prosperLoanData) +
+  geom_point(alpha = 0.01,
+             position = position_jitter(h = 0),
+             color = 'blue')
+```
+
+There is a weak correlation between loan amount and borrower APR. It seems 
+like when borrowing above $30,000, APR is more likely to be between 0.2 and 0.1,
+but I think this has more to do with the type of users borrowing in high 
+numbers. Regardless, there is a weak correlation in that APR goes down when 
+borrowing at higher amounts, which makes sense. Mortgage interest rates are 
+usually lower than credit card interest rates.
+
+
+```{r echo=FALSE, Bivariate_Plots3}
+ggplot(aes(x=IncomeRange, y =CreditScoreAverage), data = prosperLoanData) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('$0','$1-24,999','$25,000-49,999', '$50,000-74,999',
+                            '$75,000-99,999','$100,000+','Not displayed',
+                            'Not employed')) +
+  coord_cartesian(ylim=c(300,850)) +
+  scale_y_continuous(breaks = seq(300,850,50))
+
+by(prosperLoanData$CreditScoreAverage, prosperLoanData$IncomeRange, summary)
+
+```
+
+Credit score had less dependency on income range than I expected. All income 
+ranges except "Not displayed" had a median credit score average of 689.5 or 
+709.5. 
+
+```{r echo=FALSE, Bivariate_Plots4}
+ggplot(aes(x=IncomeRange, y =BorrowerAPR), data = prosperLoanData) +
+  geom_point(alpha = 0.01,
+             position = position_jitter(h = 0),
+             color = 'blue') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('$0','$1-24,999','$25,000-49,999', '$50,000-74,999',
+                            '$75,000-99,999','$100,000+','Not displayed',
+                            'Not employed'))
+
+```
+
+I decided to plot the IncomeRange vs BorrowerAPR plot as a point plot instead 
+of a boxplot to visualize where most loans are made. There's a distinct line of 
+loans made with 0.35 APR over income ranges of $1 and $100,000+. Let's 
+visualize what type of loans people within an income range is making.
+
+```{r echo=FALSE, Bivariate_Plots5}
+ggplot(aes(x=IncomeRange, y =LoanOriginalAmount), data = prosperLoanData) +
+  geom_point(alpha = 0.01,
+             position = position_jitter(h = 0),
+             color = 'blue') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('$0','$1-24,999','$25,000-49,999', '$50,000-74,999',
+                            '$75,000-99,999','$100,000+','Not displayed',
+                            'Not employed'))
+
+```
+
+Most loans were made by borrowers in the $25,000 and $75,000 range. Users with 
+higher income are more likely to make bigger loan amounts.
+
+
+```{r echo=FALSE, Bivariate_Plots6}
+ggplot(prosperLoanData, aes(CreditScoreAverage, fill=IsBorrowerHomeowner)) +
+         geom_histogram()
+
+by(prosperLoanData$CreditScoreAverage, prosperLoanData$IsBorrowerHomeowner, summary)
+```
+
+Borrowers who are homeowners have slightly higher credit scores (median=709.5)
+over borrowers who do not own homes (median=689.5). Although the medians are 
+very similar, the two group's mean differs much more. Borrowers who are 
+homeowners have a mean credit score of 714.3, and borrowers who are not 
+homeowners have a mean score of 675.3. I think we'll be able to visually see 
+this  when we plot credit score vs. APR with homeownership context in the 
+multi-variant section.
+
+```{r echo=FALSE, Bivariate_Plots7}
+ggplot(aes(x=EmploymentStatus, y =CreditScoreAverage), data = prosperLoanData) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  coord_cartesian(ylim=c(300,850)) +
+  scale_y_continuous(breaks = seq(300,850,50))
+
+by(prosperLoanData$CreditScoreAverage, prosperLoanData$EmploymentStatus, summary)
+
+```
+
+It looks like credit scores vary much more on employment status than on income 
+range. I'm surprised to see that the credit scores of employed and not employed
+users are about the same at mean=708.8, 703.0 and above that of full-time status
+(mean=678.9)
+
+```{r echo=FALSE, Bivariate_Plots8}
+ggplot(prosperLoanData, aes(x=LoanStatus, y =BorrowerAPR)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1))
+
+by(prosperLoanData$BorrowerAPR, prosperLoanData$LoanStatus, summary)
+
+```
+
+A borrower's APR is determined before the loan is made. It's interesting to 
+see that the bad loan statuses (charged off, defaulted, past due) have higher 
+APR than that of good loan statuses (completed, current, final payment). I 
+wonder if higher APR was knowingly assigned to borrowers who will have trouble 
+paying back, or is it because of higher APR that resulted in bad loan statuses.
+
+```{r echo=FALSE, Bivariate_Plots9}
+ggplot(prosperLoanData, aes(x=LoanStatus, y =CreditScoreAverage)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1))
+
+by(prosperLoanData$CreditScoreAverage, prosperLoanData$LoanStatus, summary)
+
+```
+
+As expected from our previous observation of LoanStatus vs BorrowerAPR, bad 
+loan statuses have lower credit score than good loan statuses. The exception is 
+the canceled loan status, which has the worst credit score.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+The relationship between credit score and borrower APR was as expected. Higher 
+credit scores yielded lower APR. The relationship between loan amount and 
+borrower APR was weaker than I expected. For some reason, I was expecting that 
+larger loans would mean higher APR, but it turned out to be the reverse. Larger 
+loan amount correlated with lower APR. Which makes sense when I think about it. 
+A house mortgage usually has lower interest rate than credit card interest rate.
+
+### Did you observe any interesting relationships between the other features \
+(not the main feature(s) of interest)?
+The most interesting relationship observed was bad loan statuses are mostly 
+associated with high APR. I wonder if higher APR was knowingly assigned to 
+borrowers who will have trouble paying back, or is it because of higher APR that
+resulted in bad loan statuses. Borrowers with high APR mostly have lower credit 
+scores, so in effect, loan issuers know that the borrower may have trouble 
+paying the loan back and issued loans with higher APR. However, I wonder how 
+much of bad loan status was the result of bad credit score or the fact that 
+those borrowers had to pay more due to higher APR. 
+
+### What was the strongest relationship you found?
+The strongest relationship was between credit score and borrower APR.
+
+# Multivariate Plots Section
+
+
+```{r echo=FALSE, Multivariate_Plots}
+
+ggplot(prosperLoanData, aes(x=CreditScoreAverage, y=BorrowerAPR, color=IsBorrowerHomeowner)) +
+  geom_point(alpha = 0.05,
+             position = position_jitter(h = 0))
+
+```
+
+The legend came out faint. True is cyan and False is salmon. Homeowners have 
+higher credit scores and lower APR.
+
+```{r echo=FALSE, Multivariate_Plots2}
+
+ggplot(prosperLoanData, aes(x=LoanOriginalAmount, y=BorrowerAPR, color=IsBorrowerHomeowner)) +
+  geom_point(alpha = 0.05,
+             position = position_jitter(h = 0))
+
+```
+
+Now this graph is interesting. I expected the loan amount and APR to be fairly 
+even between homeowners and non-homeowners up to $20,000. It turns out small 
+loans are mostly made by non-homeowners and large loans are made by homeowners. 
+The lowest rates are largely given to homeowners.
+
+```{r echo=FALSE, Multivariate_Plots3}
+
+ggplot(prosperLoanData, aes(x=LoanStatus, y =BorrowerAPR, 
+                            color=IsBorrowerHomeowner)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1))
+
+```
+
+As expected, homeowners have lower overall APR rate across all loan statuses.
+
+```{r echo=FALSE, Multivariate_Plots4}
+
+ggplot(prosperLoanData, aes(x=IncomeRange, y =CreditScoreAverage, 
+                            color=IsBorrowerHomeowner)) +
+  geom_point(alpha = 0.05,
+             position = position_jitter(h = 0)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  scale_x_discrete(limits=c('$0','$1-24,999','$25,000-49,999', '$50,000-74,999',
+                            '$75,000-99,999','$100,000+','Not displayed',
+                            'Not employed'))
+
+```
+
+Another view of IncomeRange vs. credit score. Homeowners have higher credit 
+score and have higher income.
+
+```{r echo=FALSE, Multivariate_Plots5}
+
+ggplot(prosperLoanData, aes(x=CreditScoreAverage, y =BorrowerAPR)) +
+  geom_point(aes(color=LoanOriginalAmount), alpha = 0.05,
+             position = position_jitter(h = 0)) +
+  scale_color_gradient(low = "red", high = "blue")
+
+```
+
+Large loans are mostly made by users with higher credit score, which yields a 
+lower APR. Larger loans also reduces APR.
+
+```{r echo=FALSE, Multivariate_Plots6}
+
+ggplot(prosperLoanData, aes(x=CreditScoreAverage, y =BorrowerAPR)) +
+  geom_point(aes(color=ProsperScore), alpha = 0.05,
+             position = position_jitter(h = 0)) +
+  scale_color_gradient(low = "red", high = "blue")
+
+```
+
+As an aside, I wanted to see how prosper scores their borrowers. As expected, 
+low APR are given to borrowers with high prosper score. Having a high credit 
+score could help in getting low APR, but there seems to be  other variables at 
+play when determing prosper score. The gray parts of the graph refer to data 
+points that did not have a prosper score. Not all transactions had prosper 
+scores tied to them. From the graph it looks like borrowers below a credit score 
+of 600 do not have a prosper score. Maybe if your credit score is below a 
+certain threshold, other variables take precidence in determining APR over 
+prosper score.
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. Were there features that strengthened each other in terms of \
+looking at your feature(s) of interest?
+
+The "IsBorrowerHomeowner" feature was especially helpful in providing 
+additional context to the plots. From the bivariant analysis, we determined 
+homeowners to have higher credit scores, take higher loans, and have lower APR. 
+With the addition of "IsBorrowerHomeowner", it is easier to visualize the 
+characteristics of a homeowner.
+
+
+### Were there any interesting or surprising interactions between features?
+
+I found it interesting that the lowest APR was given to homeowners regardless 
+of amount. I expected loan amounts below $5,000 will have about the same APR for
+homeowners and non-homeowners.
+
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+# Source: https://www.r-graph-gallery.com/264-control-ggplot2-boxplot-colors/
+# prosperLoanData$LoanStatusType=factor(ifelse(prosperLoanData$LoanStatus== "", 
+# c("Chargedoff","Defaulted","Past Due"), c('Cancelled','Completed','Current', 
+# 'FinalPaymentInProgress' )))
+
+
+ggplot(prosperLoanData, aes(x=LoanStatus, y =BorrowerAPR)) +
+  geom_boxplot() +
+  ggtitle('Loan Status vs Borrower APR') +
+  xlab('Loan Status') +
+  ylab('Brrower APR') +
+  theme(axis.text.x = element_text(angle=90, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+
+
+```
+
+### Description One
+
+Bad loan statuses are correlated with higher APR. From this graph, we see bad 
+loan statuses (Chargedoff, Defaulted, Past Due) have higher APR than good loan 
+statuses (Completed, Current, FinalPaymentInProgress). Cancelled is a neutral 
+status because the borrower decided not to take out the loan.
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(prosperLoanData, aes(x=CreditScoreAverage, y=BorrowerAPR, 
+                            color=IsBorrowerHomeowner)) +
+  geom_point(alpha = 0.05,
+             position = position_jitter(h = 0)) +
+  ggtitle('Average Credit Score vs Borrower APR') +
+  xlab('Average Credit Score') +
+  ylab('Brrower APR') +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Description Two
+
+Having a high credit score and homeownership is correlated with lower APR. A 
+majority of users with low credit score does not own a home.
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(prosperLoanData, aes(x=LoanOriginalAmount, y=BorrowerAPR, 
+                            color=IsBorrowerHomeowner)) +
+  geom_point(alpha = 0.05,
+             position = position_jitter(h = 0)) +
+  ggtitle('Original Loan Amount vs Borrower APR') +
+  xlab('Original Loan Amount ($)') +
+  ylab('Brrower APR') +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Description Three
+
+Small loans are mostly made by non-homeowners and large loans are mostly made 
+by homeowners. The lowest rates are largely given to homeowners regardless of 
+loan amount. Higher APR (0.35) are more common with loans below $10,000.
+
+------
+
+# Reflection
+
+Prosper Loan Data set is a very detailed dataset with many features to 
+analyze. Not from a finance background, I had to read up on the terminology for 
+quite a few words and descriptions for concepts. Something that should be 
+obvious like lower APR in larger loan amounts was not immediately obvious to me. 
+I think that's one of the challenges in being a data analyst in that we have to 
+become familiar with the data before we can ask the right questions. \
+In my analysis, I've only explored a small set of features from this dataset. 
+There's much more to analyze with this dataset. A future work would be to
+explore Prosper's own ratings of borrowers. In the multi-variant section, I 
+explored the prosper score feature. We saw borrowers with credit scores below 
+600 was not given a Prosper rating. I'm curious to see what other methodologies 
+Prosper uses to determine a borrower's APR.
