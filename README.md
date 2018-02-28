@@ -19,6 +19,6 @@ Prosper Loan Data set is a very detailed dataset with many features to analyze. 
 In my analysis, I’ve only explored a small set of features from this dataset. There’s much more to analyze with this dataset. A future work would be to explore Prosper’s own ratings of borrowers. In the multi-variant section, I explored the prosper score feature. We saw borrowers with credit scores below 600 was not given a Prosper rating. I’m curious to see what other methodologies Prosper uses to determine a borrower’s APR.
 
 ## Files
-PorsperLoanAnalysis.html: html output of ProsperLoanAnalysis.rmd
-ProsperLoanAnalysis.rmd: R Studio analysis of the data
+PorsperLoanAnalysis.html: html output of ProsperLoanAnalysis.rmd <br>
+ProsperLoanAnalysis.rmd: R Studio analysis of the data <br>
 prosperLoanData.csv: loan data from Prosper 
